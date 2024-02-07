@@ -10,6 +10,8 @@ and per day.
 """
 
 output_dict_direct_rail_purged = "./output/rail/dict_direct_rail_purged.pickle"
+fig_name = "./output/figs/number_options_rail.png"
+day_options = '20230501'
 
 with open(output_dict_direct_rail_purged, "rb") as f:
     dict_direct_rail_purged = pickle.load(f)
@@ -23,7 +25,9 @@ for k, v in dict_direct_rail_purged.items():
         number_options_rail_day[k].update({od: options})
 
 # Number of options in a given day between o-d pairs
-print(number_options_rail_day['20230501'])
+print("Options between airports for day: "+day_options)
+for od, options in number_options_rail_day[day_options].items():
+    print(od, ":", options)
 
 # All od, all days rail
 all_od_rail = set()
@@ -67,7 +71,8 @@ ax.set_xticklabels(list_order_od, rotation=90)
 ax.legend(title='Days')
 
 # Show the plot
-plt.show()
+plt.savefig(fig_name, transparent=False, facecolor='white', bbox_inches='tight')
+
 
 # Total number of services
 day = '20230507'
