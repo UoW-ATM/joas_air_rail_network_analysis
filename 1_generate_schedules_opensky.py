@@ -352,6 +352,18 @@ def fix_rotations(df_fa, dict_avg_times, dict_airports_used, threshold_same_airp
                                                                            minimum_fly_time_to_add=minimum_fly_time_to_add)
     return changes_to_apply_fix_rotations
 
+
+def print_number_flights_od(df, origin, destination):
+    logging.info(str(origin) + "-" + str(destination) +
+                 str(len(df[(df.estdepartureairport == origin) & (df.estarrivalairport == destination)])))
+
+
+def count_changes(df):
+    # Count how many changes we have done to the initial dataset
+    return [len(df), sum(df['estdepartureairport'] != df['departure']),
+            sum(df['estarrivalairport'] != df['arrival'])]
+
+
 #################################
 # PROCESSING DATA FIX ROTATIONS #
 #################################
@@ -360,11 +372,20 @@ def fix_rotations(df_fa, dict_avg_times, dict_airports_used, threshold_same_airp
 # READ DATA/CLEAN AND PREPARE
 ####
 
+logging.info('\n----------\nREADING DATA\n----------\n')
+
 # Read data
 df_flight = pd.read_csv(f_flight_data_opensky)
 df_airport_st = pd.read_csv(f_airport_static)
 df_aircraft = pd.read_csv(f_aircraft_db_opensky)
 
+# Dictionary of manually fixed airports
+# From experience and looking at information of airports missing lat, lon below.
+# Usually a small airfield instead of the main airport.
+dict_manual_fixing_airports = pd.read_csv(f_fixed_airports).set_index('icao_orig')['icao_fixed'].to_dict()
+
+
+logging.info('\n----------\nCLEANING DATA\n----------\n')
 # Clean df_flight removing rows without callsign
 df_f = df_flight[~df_flight['callsign'].isnull()].copy()
 
@@ -372,6 +393,12 @@ df_f = df_flight[~df_flight['callsign'].isnull()].copy()
 logging.info('%d, flights read', len(df_flight))
 logging.info('%d, flights with callsign', len(df_f))
 logging.info('%d, flights removed (%f%%)', len(df_flight)-len(df_f), 100*round((len(df_flight)-len(df_f))/len(df_flight), 3))
+
+
+# Analysis of flights within Spain to identify which airlines to keep/process/of interest
+# Filter to keep only flights departing and arriving to Spain and count how many flights per airline
+# Save information in csv file
+logging.info("\n----------\nFIND AIRLINES OF INTEREST\n----------\n")
 
 # Add airline column using first 3 letters of callsign as a proxy
 df_f['airline'] = df_f['callsign'].apply(lambda x: x[0:3])
@@ -404,14 +431,28 @@ df_fa = df_f[(df_f['airline'].isin(airlines_of_interest))].copy()
 
 logging.info('%d flights of airlines interest (%f%%)', len(df_fa), 100*round(len(df_fa)/len(df_f), 3))
 
+# How many flights between selected o-d pairs just to check with have them...
+# Used for sanity check, e.g. in some datasets there are hardly any flight between LEMD and LEBL recorded
+# this clearly indicates bad coverage as there should be quite a few flights and roughly the same on both
+# directions. It's a way of checking the data quality
+logging.info("\n----------\nCHECK AT LEAST FLIGHTS BETWEEN O-D PAIRS\n----------\n")
+
+logging.info("\n A few examples of numbers of flights between airports")
+print_number_flights_od(df_fa, 'LEMD', 'LEBL')
+print_number_flights_od(df_fa, 'LEBL', 'LEMD')
+
+
+# Add date of first, last seen of observations
+logging.info("\n----------\nADD FISRT LAST SEEN\n----------\n")
 # Add date of first, last seen
 df_fa['firstseen_datetime'] = pd.to_datetime(df_fa['firstseen'], unit='s')
 df_fa['lastseen_datetime'] = pd.to_datetime(df_fa['lastseen'], unit='s')
 df_fa['firstseen_date'] = df_fa['firstseen_datetime'].dt.date
 df_fa['lastseen_date'] = df_fa['lastseen_datetime'].dt.date
 
-# Dictionary of manually fixed airports
-dict_manual_fixing_airports = pd.read_csv(f_fixed_airports).set_index('icao_orig')['icao_fixed'].to_dict()
+
+# Manually fixing airports
+logging.info("\n----------\nMANUALLY FIXING DEPARTURE/ARRIVAL AIRPORTS\n----------\n")
 
 df_fa[['estarrivalairport', 'estdepartureairport']] = df_fa[['estarrivalairport', 'estdepartureairport']].fillna(value="NULL")
 df_fa['departure_used'] = df_fa['estdepartureairport'].apply(lambda x: dict_manual_fixing_airports.get(x, x))
@@ -419,11 +460,19 @@ df_fa['arrival_used'] = df_fa['estarrivalairport'].apply(lambda x: dict_manual_f
 df_fa['departure'] = df_fa['departure_used']
 df_fa['arrival'] = df_fa['arrival_used']
 
+logging.info("Changes done to data to adjust departures and arrivals manually " +
+          "(total flights, departure changed, arrival changed)")
+logging.info(str(df_fa.groupby(['airline']).apply(count_changes)))
+
+
 # Compute duration of flights seen and dictionary of average travelling time between origin-destination seen
+logging.info("\n----------\nCOMPUTE BLOCK TIMES\n----------\n")
+
 df_fa['durationseen'] = df_fa['lastseen'] - df_fa['firstseen']
 df_fa['est_departure_arrivalairports'] = df_fa['departure_used']+"_"+df_fa['arrival_used']
 dict_avg_times = df_fa.groupby('est_departure_arrivalairports')['durationseen'].mean().to_dict()
 
+logging.info("\n----------\nFIXING ROTATIONS\n----------\n")
 # Compute how many flights departing/arriving airports
 # How many flights (departing and arrival) are estimated used by airports
 counter_airports_used = Counter(list(df_fa.departure)+list(df_fa.arrival))
@@ -506,7 +555,7 @@ df_fa_g = df_fa_g.merge(df_airport_st[['ICAO', 'lat', 'lon']],
 df_fa_g = df_fa_g.merge(df_airport_st[['ICAO', 'lat', 'lon']],
                         left_on='arrival_used', right_on='ICAO', how='left').rename(columns={'lat': 'arr_lat', 'lon': 'arr_lon'}).drop('ICAO', axis=1)
 
-# Identify airports arrival which are not in list of airpots with lat,lon
+# Identify airports arrival which are not in list of airports with lat,lon
 # Might need to be fixed in manual fixed airports
 # Should be zero, so if some airports are here they need to be modified --> added to f_fixed_airports
 df_airports_missing_arr = df_fa_g[df_fa_g.arr_lat.isnull() & (df_fa_g.arrival != 'NULL')].arrival_used.drop_duplicates()
@@ -527,6 +576,8 @@ if len(df_airports_missing_dep) > 0:
 # Compute GCD between airports origin-destination in km
 df_fa_g['gcd_km'] = df_fa_g.apply(lambda x: haversine(x.dep_lon, x.dep_lat, x.arr_lon, x.arr_lat), axis=1)
 
+
+logging.info("\n----------\nMERGE WITH AIRCRAFT TYPE DATABASE\n----------\n")
 # Merge now with the database of aircraft types to have the ac_type per flight
 
 df_ac = df_aircraft[['icao24', 'registration', 'model', 'typecode', 'operatoricao']]
@@ -537,6 +588,8 @@ df_fa_g = df_fa_g.merge(df_ac, left_on='icao24', right_on='icao24', how='left')
 logging.info("Ac type missing for ADS-B registration and average distance of a/c used")
 logging.info(df_fa_g[df_fa_g['typecode'].isnull()].groupby(['icao24'])['gcd_km'].mean().to_string())
 
+
+logging.info("\n----------\nESTIMATE TAKE-OFF AND LANDING TO ADJUST SCHEDULES\n----------\n")
 # Estimate takeoff and landing based on average climb and descend speeds and distance (line) from first/last seen and
 # airport estimated originally
 df_fa_g['extra_climb_time'] = round(60*df_fa_g['estdepartureairportvertdistance'] / climb_speed)
@@ -558,6 +611,7 @@ df_fa_g['sibt'] = df_fa_g['aibt'].apply(lambda x: datetime.utcfromtimestamp(x) i
 #########################
 # SAVE OUTPUT SCHEDULES #
 #########################
+logging.info("\n----------\nSAVE COMPUTED SCHEDULES\n----------\n")
 df_fa_g.to_csv(f_all_output_csv, index=True)
 df_fa_g[['airline', 'icao24', 'departure_used', 'arrival_used', 'sobt', 'sibt', 'callsign', 'typecode', 'model',
          'gcd_km', 'dep_lat', 'dep_lon', 'arr_lat', 'arr_lon']].to_csv(f_reduced_output_csv, index=False)
