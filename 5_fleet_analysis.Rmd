@@ -1,0 +1,492 @@
+---
+title: "OpenSky2023 ratios"
+output: html_notebook
+---
+
+```{r}
+library(ISwR)
+library(data.table)
+library(reshape2)
+library(tidyr)
+library(dplyr)
+library(colorspace)
+library(stringr)
+library(airportr)
+library(geosphere)
+library(ggplot2)
+```
+
+```{r}
+## PART 1. Manipulation of primary data
+primarypath<-getwd()
+secondarypath<-"/output/air/"
+file<-"schedules_1st_week_0523_all_airlines_reduced.csv"
+#loading data - initial
+filepath<- paste0(primarypath,secondarypath)
+filename<-paste0(filepath,file,sep="")
+mat<-read.csv(filename, header=TRUE, stringsAsFactors=FALSE, sep = ",", dec = ".")
+
+mat$sobt<-strptime(mat$sobt,"%Y-%m-%d %H:%M:%S",tz="UTC")
+mat$sibt<-strptime(mat$sibt,"%Y-%m-%d %H:%M:%S",tz="UTC")
+mat$bt<-as.numeric(difftime(mat$sibt,mat$sobt),units="hours")
+
+#loading data for time_ban
+secondarypath<-"/output/multi/"
+filepath<-paste0(primarypath,secondarypath)
+#preparacion base de lectura
+num_days<-7
+vec_days<-c("20230501","20230502","20230503","20230504","20230505","20230506","20230507")
+vec_tban<-c("0000","0300","0600","0900","1200","1400")
+vec_labelban<-paste(str_sub(vec_tban,1,2),str_sub(vec_tban,3,4),sep=":")
+ext_ban<-"_ds_day_direct_ban.csv"
+
+#tban as real vector
+valor_tban<-as.numeric(str_sub(vec_tban,1,2))+(as.numeric(str_sub(vec_tban,-2,-1))/60)
+
+#loading data ban
+matban<-data.frame()
+
+for (i in 1:num_days){
+  for (j in 1:length(vec_tban)){
+    file<-paste0(vec_tban[j],ext_ban)
+    file<-paste(vec_days[i],file,sep="_")
+    file<-paste(vec_days[i],file,sep="/")
+    filename<-paste0(filepath,file)
+    aux<-read.csv(filename, header=TRUE, stringsAsFactors=FALSE, sep = ",", dec = ".")
+    aux$tban<-as.numeric(valor_tban[j])
+    aux$txtban<-paste(str_sub(vec_tban[j],1,2),str_sub(vec_tban[j],-2,-1),sep=":")
+    matban<-rbind(matban,aux)
+  }
+}
+
+matban$sobt<-strptime(matban$sobt,"%Y-%m-%d %H:%M:%S",tz="UTC")
+matban$sibt<-strptime(matban$sibt,"%Y-%m-%d %H:%M:%S",tz="UTC")
+matban$bt<-as.numeric(difftime(matban$sibt,matban$sobt),units="hours")
+
+matban$newcol<-paste(matban$airline,matban$icao24,matban$departure_used,matban$arrival_used,matban$sobt,matban$sibt)
+matban <- matban[order(matban$newcol, -matban$tban),]
+matban<-matban[!duplicated(matban$newcol),]
+matban<-matban[order(matban$X),]
+
+mat$newcol<-paste(mat$airline,mat$icao24,mat$departure_used,mat$arrival_used,mat$sobt,mat$sibt)
+
+#this match is to assign tban to each flight
+x<-match(mat$newcol,matban$newcol)
+mat$tban<-matban$tban[x]
+mat$tban<-as.numeric(mat$tban)
+mat$txtban<-matban$txtban[match(mat$newcol,matban$newcol)]
+
+#saving success
+x[!is.na(x)]<-1
+x[is.na(x)]<-0
+mat$ld<-x 
+
+mat$tban[is.na(mat$tban)]<-9999
+mat$txtban[is.na(mat$txtban)]<-"99:99"
+
+mat$tban[str_sub(mat$departure_used,1,4)=="NULL" | str_sub(mat$arrival_used,1,4)=="NULL"]<-as.numeric(-1)
+mat$txtban[str_sub(mat$departure_used,1,4)=="NULL" | str_sub(mat$arrival_used,1,4)=="NULL"]<-"-1:00"
+mat<-mat[order(mat$X),]
+
+mat<-mat %>% relocate(tban,.after=bt)
+
+
+# adding seats
+fileseats<-paste0(primarypath,"/data/code_seats.csv")
+acft<-read.csv(fileseats,header=TRUE, stringsAsFactors=FALSE,sep=";",dec=".",encoding="UTF-8")
+mat$new<-paste(mat$airline,mat$typecode,sep="_")
+mat$seats_min<-acft$seats_min[match(mat$new,acft$code)]
+mat$seats_max<-acft$seats_max[match(mat$new,acft$code)]
+mat$seats<-mat$seats_max
+mat$new<-NULL
+mat$seats_min<-NULL
+mat$seats_max<-NULL
+
+
+
+#count aircraft types
+#1st - correction
+filemissing<-paste0(primarypath,"/data/type_code_missing.csv")
+xactype<-read.csv(filemissing, header=TRUE, stringsAsFactors=FALSE, sep = ";", dec = ".")
+mat$typecode[mat$typecode==""] <- xactype$typecode[match(mat$icao24,xactype$icao24)][which(mat$typecode=="")]
+mat$model[mat$model==""] <- xactype$model[match(mat$icao24,xactype$icao24)][which(mat$model=="")]
+
+
+mat_n_typecodes<-aggregate(mat$typecode, list(mat$airline), FUN=length)
+mat_n_typecodes<-count(mat, airline,typecode)
+mat_n_typecodes<-mat_n_typecodes[order(mat_n_typecodes$airline,mat_n_typecodes$n),]
+colnames(mat_n_typecodes)[which(names(mat_n_typecodes) == "n")] <- "n_typecodes"
+
+mat_n_icao24<-data.frame(airline=mat$airline,icao24=mat$icao24)
+mat_n_icao24<-unique(mat_n_icao24)
+mat_n_icao24<-count(mat_n_icao24,airline)
+colnames(mat_n_icao24)[which(names(mat_n_icao24) == "n")] <- "n_icao24"
+
+
+mat_n_typecodes<-data.frame(airline=mat$airline,icao24=mat$icao24,typecode=mat$typecode)
+mat_n_typecodes<-unique(mat_n_typecodes)
+mat_n_typecodes<-count(mat_n_typecodes,airline,typecode)
+
+```
+
+```{r}
+## PART 2. Block Time correction - discard time out of period analysis
+
+mu<-data.frame(id=mat$X)
+nrow_mu<-nrow(mu)
+num_days_expanded<-num_days+2
+for (i in 1:num_days_expanded) {
+  mu$new<-rep(0, nrow_mu)
+  colnames(mu)[which(names(mu) == "new")] <- paste0("bt_",i-1)}
+
+apuntador_col<-rep(1,num_days_expanded)+seq(1,num_days_expanded,1)
+mu$do<-rep(0,nrow_mu)
+mu$di<-rep(0,nrow_mu)
+mu$to<-rep(0,nrow_mu)
+mu$ti<-rep(0,nrow_mu)
+
+xo_min<-min(mat$sobt) #generic extraction
+do_min<-as.numeric(format(xo_min,"%j")) #day minim
+
+for (i in 1:nrow_mu){
+  xo<-mat$sobt[i] 
+  xi<-mat$sibt[i]
+  do<-as.numeric(format(xo, "%j"))
+  di<-as.numeric(format(xi, "%j"))
+  to<-as.numeric(format(xo,"%H"))+as.numeric(format(xo,"%M"))/60+as.numeric(format(xo,"%S"))/60/60
+  ti<-as.numeric(format(xi,"%H"))+as.numeric(format(xi,"%M"))/60+as.numeric(format(xi,"%S"))/60/60
+  j<-apuntador_col[1+do-do_min]
+  if (do==di) {
+    mu[i,j]<-ti-to
+    } else if (do<di) {
+    mu[i,j]<-(24-to)
+    j<-apuntador_col[1+di-do_min]
+    mu[i,j]<-ti
+    }
+}
+mat$bt_corrected<-rowSums(mu[,c(3,4,5,6,7,8,9)])
+ncol_mat_pre_days<-ncol(mat)
+mat<-cbind(mat,mu[,seq(2,1+num_days_expanded,1)])
+ncol_mat<-ncol(mat)
+```
+
+```{r}
+## FIG 4. Utilization Factors - we have to use btcorrected - using tban (ban time)
+#filters
+matUFb<-mat
+#aggregation
+matUFb<-data.frame(airline=matUFb$airline,icao24=matUFb$icao24,bt=matUFb$bt,bt_corrected=matUFb$bt_corrected,tban=matUFb$tban)
+#matUFb<-cbind(matUFb,mu[,seq(2,1+num_days_expanded,1)])
+aux<-mat[,(ncol(mat)-num_days_expanded+1):(ncol(mat))]
+matUFb<-cbind(matUFb,aux)
+matUFb$tban<-as.numeric(matUFb$tban)
+
+#filter bt and tban... 
+matUFb<-subset(matUFb,bt<15 & tban>=0 & tban<99)
+matUFb$bt<-NULL
+
+#expansion
+n<-length(vec_tban)
+matb<-data.frame()
+for (j in 1:n) {
+  mnew<-matUFb[matUFb$tban>=valor_tban[j],]
+  mnew$labelban<-paste(str_sub(vec_tban[j],1,2),str_sub(vec_tban[j],-2,-1),sep=":")
+  matb<-rbind(matb,mnew)
+}
+#rm(matnew,mat15short)
+matb$labelban<-as.factor(matb$labelban)
+
+matUFb<-matb
+rm(matb)
+
+#aggregation and distorsion
+matUFb$tban<-NULL
+#matUF<-aggregate(btcorrected ~ airline+icao24, data = matUF, FUN = sum)
+matUFb<-aggregate(.~airline+icao24+labelban, matUFb, sum)
+
+matUFb$UF<-matUFb$bt_corrected/24/num_days
+aux<-matUFb[,seq(5,4+num_days_expanded)]/24
+colnames(aux)<-paste("UF_",seq(0,num_days+1))
+matUFb<-cbind(matUFb,aux)
+
+#fig4. bloxplot per ban time and airline
+label_fig4<-"fig4.Utilisation_factor_per_ban_time_airline_facet.png"
+fig4<-ggplot(matUFb, aes(x=labelban,y=UF))+theme_bw()
+fig4<-fig4+geom_boxplot(linewidth=.3, outlier.shape=3,outlier.size=1,notch=FALSE)+
+  stat_summary(fun.y="mean", geom="point",shape=18,size=1.5,color=124)+facet_wrap(~airline)
+fig4<-fig4+labs(x = "Ban Time (hh:mm)", y = "Utilisation Factor")+
+  theme(axis.title.x = element_text(vjust = -1, size = 12),
+        axis.title.y = element_text(vjust = 1, size = 12),
+        axis.text.x = element_text(size=rel(1.2), angle=45,vjust=.5),
+        axis.text.y=element_text(size=rel(1.2),angle=0),
+        strip.background =  element_rect(fill = NA, colour = NA), 
+        strip.text =element_text(size = rel(.9),hjust = 0.5, vjust = 1))
+fig4
+
+```
+
+```{r}
+## FIG 6. Fleet requirement - we have to use bt_corrected - sin diferenciar tipo de avion
+matF<-mat
+#filtering aggregation
+matF<-data.frame(airline=matF$airline,icao24=matF$icao24,bt=matF$bt,bt_corrected=matF$bt_corrected,tban=matF$tban)
+matF$tban<-as.numeric(matF$tban)
+
+#filtrar bt y tban 
+matF<-subset(matF,bt<15 & tban>=0 & tban<99)
+matF$bt<-NULL
+
+#condition
+n<-length(vec_tban)
+matfb<-data.frame()
+for (j in 1:n) {
+  mnew<-matF[matF$tban>=valor_tban[j],]
+  mnew$labelban<-paste(str_sub(vec_tban[j],1,2),str_sub(vec_tban[j],-2,-1),sep=":")
+  matfb<-rbind(matfb,mnew)
+}
+
+matfb$labelban<-as.factor(matfb$labelban)
+
+matfb$tban<-NULL
+matF<-matfb
+rm(matfb)
+
+# strategic estimation
+mat1<-matF
+mat1$icao24<-NULL
+mat1<-aggregate(bt_corrected~airline +labelban, mat1, sum)
+mat1<-mat1[order(mat1$airline),]
+colnames(mat1)[which(names(mat1) == "bt_corrected")] <- "bt_total"
+
+mat2<-matF
+mat2$bt_corrected<-NULL
+mat2<-unique(mat2)
+mat2<-aggregate(icao24~airline+labelban, mat2, length)
+colnames(mat2)[which(names(mat2) == "icao24")] <- "size"
+mat2<-mat2[order(mat2$airline),]
+
+
+matF<-left_join(mat2,mat1)
+rm(mat1,mat2)
+matF$UF<-matF$bt_total/matF$size/24/num_days
+
+mat_patron<-matF[matF$labelban==vec_labelban[1],]
+
+matF$UFpatron<-mat_patron$UF[match(matF$airline,mat_patron$airline)]
+matF$resize<-matF$bt_total/matF$UFpatron/24/num_days
+
+resizing<-data.frame(airline=matF$airline,labelban=matF$labelban,resize=matF$resize)
+resizing<-aggregate(.~ airline + labelban,resizing,sum)
+resizing$ceilresize<-ceiling(resizing$resize)
+
+
+
+#fig6. Fleet size per airline and t_ban
+dtrange<-data.frame(airline=resizing$airline,ceilresize=resizing$ceilresize)
+dtrange<-aggregate(.~ airline,dtrange,FUN = function(i) (max(i)-min(i))) #FUN = function(i)max(i) - min(i)
+mid_range<-ceiling(max(dtrange$ceilresize)/2)
+
+my_limits <- function(x) { c((ceiling((min(x)+max(x))/2)-mid_range),(ceiling((min(x)+max(x))/2)+mid_range)) }
+my_breaks <- function(x) { seq((ceiling((min(x)+max(x))/2)-mid_range),(ceiling((min(x)+max(x))/2)+mid_range),1) }
+
+#fig7 Fleet size per airline and t_ban
+label_fig6<-"fig6.Fleet_size_strategic_per_ban_time_airline_facet__strategic.png"
+fig6<-ggplot(resizing, aes(x=labelban,y=ceilresize))+theme_bw()
+fig6<-fig6+geom_point(shape=18,size=2,color=124)+facet_wrap(~airline, scales = "free")
+fig6<-fig6+labs(x = "Ban Time (hh:mm)", y = "Fleet Size") +
+  theme(text = element_text(size=10),
+        axis.title.x = element_text(vjust = -1, size = 12),
+        axis.title.y = element_text(vjust = 1, size = 12),
+        axis.text.x = element_text(size=rel(1.2), angle=45,vjust=.5),
+        axis.text.y=element_text(size=rel(1.1),angle=0),
+        panel.grid.minor.y = element_blank(),
+        strip.background =  element_rect(fill = NA, colour = NA), 
+        strip.text =element_text(size = rel(.9),hjust = 0.5, vjust = 1))+
+      scale_y_continuous(breaks = my_breaks,limits=my_limits)
+fig6
+```
+
+```{r}
+## PART 3. Selecting routing for analysis
+matR<-mat #todo
+
+##clean columns that not serve now
+matR$dep_lat<-NULL
+matR$dep_lon<-NULL
+matR$arr_lat<-NULL
+matR$arr_lon<-NULL
+matR$newcol<-NULL
+matR <- select(matR,-starts_with("bt_"))
+
+
+## condition day of analysis
+day_analysis<-1:7
+day_analysis_long<-121:127
+
+matR$dayo<-as.numeric(format(matR$sobt,"%d"))
+matR$dayi<-as.numeric(format(matR$sibt,"%d"))
+
+matR<-matR[matR$dayo %in% day_analysis | matR$dayi %in% day_analysis,]
+matR<-matR[order(matR$icao24,matR$X),]
+
+matR$dd<-as.numeric(format(matR$sobt,"%j"))
+matR$ad<-as.numeric(format(matR$sibt,"%j"))
+matR$dtdec<-as.numeric(format(matR$sobt,"%H"))+as.numeric(format(matR$sobt,"%M"))/60+as.numeric(format(matR$sobt,"%S"))/3600
+matR$atdec<-as.numeric(format(matR$sibt,"%H"))+as.numeric(format(matR$sibt,"%M"))/60+as.numeric(format(matR$sibt,"%S"))/3600
+
+#additional information for aircraft routing
+filecorrection<-paste0(primarypath,"/data/mat_corrected.csv")
+mat_corrected<-read.csv(filecorrection, header=TRUE, stringsAsFactors=FALSE, sep = ";", dec = ",")
+
+x<-match(matR$X,mat_corrected$X)
+matR$dep<-mat_corrected$dep[x]
+matR$arr<-mat_corrected$arr[x]
+matR$route<-mat_corrected$route[x]
+matR$num_flights<-mat_corrected$num_flights[x]
+matR$position<-mat_corrected$position[x]
+matR$ini_apt_ro<-mat_corrected$ini_apt_ro[x]
+matR$fin_apt_ro<-mat_corrected$fin_apt_ro[x]
+matR$dd<-mat_corrected$dd[x]
+matR$ad<-mat_corrected$ad[x]
+matR$dtdec<-mat_corrected$dtdec[x]
+matR$atdec<-mat_corrected$atdec[x]
+matR$depdec<-mat_corrected$depdec[x]
+matR$arrdec<-mat_corrected$arrdec[x]
+matR$depdec<-mat_corrected$depdec[x]
+matR$ini_ro<-mat_corrected$ini_ro[x]
+matR$fin_ro<-mat_corrected$fin_ro[x]
+matR$tat<-mat_corrected$tat[x]
+matR$acat<-mat_corrected$category[x]
+
+matR$txtban[matR$tban==-1]<-"99:99"
+matR$tban[matR$tban==-1]<-99
+
+#only routes of our interest
+#1 only cat M
+matR<-matR[matR$acat=="M",]
+matR<-matR[matR$num_flights > 1,]
+#2 only routes with icao24 and the entire route is inside of the period of analysis
+a<-matR$icao24[matR$dd %in% day_analysis_long & matR$ad %in% day_analysis_long]
+a<-unique(a)
+matR<-matR[matR$icao24 %in% a,]
+
+
+
+#min fleet with characteristic tat
+tat_design<-quantile(matR$tat[matR$tat<9],.5)
+matR$tat_design<-tat_design
+
+#start - end route
+matR$tiro<-rep(0,nrow(matR))
+matR$tfro<-rep(0,nrow(matR))
+matR$ttro<-rep(0,nrow(matR))
+matR$btro<-rep(0,nrow(matR))
+for (i in 1:nrow(matR)){
+  xr<-matR$route[i]
+  xf<-matR$num_flights[i]
+  xp<-matR$position[i]
+  matR$tiro[i]<-matR$dtdec[matR$route==xr & matR$position==1]
+  matR$tfro[i]<-matR$atdec[matR$route==xr & matR$position==xf]
+  matR$ttro[i]<-matR$tfro[i]-matR$tiro[i]
+  y<-matR$bt[matR$route==xr]
+  matR$btro[i]<-sum(y)
+}
+
+matRexpanded<-matR
+matRexpanded$labelban<-"original"
+
+#condition of banning
+n<-length(vec_tban)
+for (j in 1:n) {
+  mnew<-matR[matR$tban>=valor_tban[j],]
+  mnew$labelban<-paste(str_sub(vec_tban[j],1,2),str_sub(vec_tban[j],-2,-1),sep=":")
+  matRexpanded<-rbind(matRexpanded,mnew)
+}
+
+matRexpanded$labelban<-matRexpanded$labelban
+
+vec_labelban<-unique(matRexpanded$labelban)
+
+#new_num_flights
+for (i in 1:nrow(matRexpanded)) {
+  xban<-matRexpanded$labelban[i]
+  xr<-matRexpanded$route[i]
+  xf<-matRexpanded$num_flights[i]
+  xp<-matRexpanded$position[i]
+  matRexpanded$new_numflights[i]<-length(matRexpanded$num_flights[matRexpanded$route==xr & matRexpanded$labelban==xban])
+  matRexpanded$broken_ro[i]<-ifelse(xf==matRexpanded$new_numflights[i],0,1)
+  y<-matRexpanded$dtdec[matRexpanded$route==xr & matRexpanded$labelban==xban]
+  matRexpanded$new_tiro[i]<-min(y)
+  y<-matRexpanded$atdec[matRexpanded$route==xr & matRexpanded$labelban==xban]
+  matRexpanded$new_tfro[i]<-max(y)
+  matRexpanded$new_ttro[i]<-matRexpanded$new_tfro[i]-matRexpanded$new_tiro[i]
+  y<-matRexpanded$bt[matRexpanded$route==xr & matRexpanded$labelban==xban]
+  matRexpanded$new_btro[i]<-sum(y)
+}
+
+```
+
+```{r}
+## routes 
+matRo<-data.frame(airline=matRexpanded$airline,labelban=matRexpanded$labelban,route=matRexpanded$route,new_numflights=matRexpanded$new_numflights,broken_ro=matRexpanded$broken_ro,tiro=matRexpanded$tiro,tfro=matRexpanded$tfro,ttro=matRexpanded$ttro,btro=matRexpanded$btro,ntiro=matRexpanded$new_tiro,ntfro=matRexpanded$new_tfro,nttro=matRexpanded$new_ttro,nbtro=matRexpanded$new_btro)
+matRo<-unique(matRo)
+matRo$old_groundratio<-1-matRo$btro/matRo$ttro
+matRo$new_groundratio<-1-matRo$nbtro/matRo$ttro
+matRo$var_groundtime<-(matRo$new_groundratio/matRo$old_groundratio)-1
+
+matRo<-matRo[matRo$old_groundratio>=0,]
+
+matRo_count<-data.frame(airline=matRexpanded$airline,labelban=matRexpanded$labelban,route=matRexpanded$route,broken_ro=matRexpanded$broken_ro)
+matRo_count<-unique(matRo_count)
+
+x.len <- aggregate(route ~ labelban+airline, matRo_count,length)
+x.sum  <- aggregate(broken_ro ~ labelban+airline, matRo_count,sum)
+matRo_count<-merge(x.len, x.sum, by = c("airline","labelban"))
+matRo_count$ro_intact<-matRo_count$route-matRo_count$broken_ro
+rm(x.sum,x.len)
+matRo_count<-matRo_count[match(vec_labelban,matRo_count$labelban),]
+
+
+## FIG 5. Ground time and intact routes
+matRo<-matRo[matRo$labelban!="original",]
+matRo<-matRo[matRo$var_groundtime>=0 & matRo$var_groundtime<=4,]
+
+#fig5 Ground time
+matRo_sintesis<-aggregate(var_groundtime~labelban+airline,matRo,mean)
+label_fig5<-"fig5.Ground_time_variation_ban_time.png"
+fig5<-ggplot(matRo_sintesis, aes(x=labelban,y=var_groundtime,group=airline,color=airline))+theme_bw()
+fig5<-fig5+geom_point(aes(group=airline),shape=18,size=5)
+fig5<-fig5+geom_line(aes(group=airline),size=1)
+fig5<-fig5+labs(x = "Ban Time (hh:mm)", y = "Ground time variation")+
+  theme(axis.title.x = element_text(vjust = -1, size = 14),
+        axis.title.y = element_text(vjust = 1, size = 14),
+        axis.text.x = element_text(size=rel(1.5), angle=45,vjust=.5),
+        axis.text.y=element_text(size=rel(1.5),angle=0),
+        legend.text=element_text(size=rel(.9)),
+        legend.title=element_text(size=rel(1.1)))
+fig5 <- fig5 + guides(color=guide_legend(title="Airline"))
+fig5
+#ggsave("Fig5.Ground_time_variation_ban_time.png",fig5,width=1400,height=600,units="px",dpi=150)
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+ 
