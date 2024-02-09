@@ -26,7 +26,7 @@ Repository with code used to generate analysis and results of the article:
 Delgado, L., Trapote-Barreira, C., Montlaur, A., Bolić, T., & Gurtner, G. (2023). _Airlines’ network analysis on an air-rail multimodal system_. Journal of Open Aviation Science, 1(2). https://doi.org/10.59490/joas.2023.7223
 
 ### i. Abstract <a name="about_abstract"></a>
-This article explores the potential impact of short-haul flight bans in Spain. We build the rail and flight network for the Spanish peninsula, merging openly available ADS-B-based data, for the reconstruction of air schedules and aircraft rotations, and rail operator data, for the modelling of the rail network. We then simulate a ban that would remove flights having a suitable train replacement, i.e., representing a trip shorter than a threshold that we vary continuously up to 15 hours. We study the impact in terms of 1) air route reduction, 2) aircraft utilisation and fleet downsizing for airlines, 3) airport infrastructure relief and rail network requirements, 4) CO2 emissions, and 5) possible itineraries and travel times for passengers. We find that a threshold of 3 hours (banning all flights with a direct rail alternative faster than three hours) presents some notable advantages in emissions while keeping the aircraft utilisation rate at an adequate level. Interestingly, the passengers would then experience an increase in their itinerary options, with only a moderate increase in their total travelling times.
+This article explores the potential impact of short-haul flight bans in Spain. We build the rail and flight network for the Spanish peninsula, merging openly available ADS-B-based data, for the reconstruction of air schedules and aircraft rotations, and rail operator data, for the modelling of the rail network. We then simulate a ban that would remove flights having a suitable train replacement, i.e., representing a trip shorter than a threshold that we vary continuously up to 15 hours. We study the impact in terms of 1) air route reduction, 2) aircraft utilisation and fleet downsizing for airlines, 3) airport infrastructure relief and rail network requirements, 4) CO<sub>2</sub> emissions, and 5) possible itineraries and travel times for passengers. We find that a threshold of 3 hours (banning all flights with a direct rail alternative faster than three hours) presents some notable advantages in emissions while keeping the aircraft utilisation rate at an adequate level. Interestingly, the passengers would then experience an increase in their itinerary options, with only a moderate increase in their total travelling times.
 
 ## 2. Setup <a name="setup"></a>
 
@@ -61,13 +61,13 @@ The authors have also compiled additional datasets, such as airport data (e.g. l
 ### ii. Brief data description <a name="data_brief_description"></a>
 Brief description of data input:
 - From [OpenSky](https://opensky-network.org/data/impala):
-  - flights_data4 --> contains the data from flights_data4 table from OpenSky for the first week of May 2023.
-  - aircraftDatabase.csv --> aircraft database (registration, type, etc.) as a function of transponder's icao24 id.
+  - flight information from OpenSky's flights_data4 table for the first week of May 2023.
+  - aircraft database (registration, type, etc.) as a function of transponder's icao24 id.
 - From [Renfe](https://data.renfe.com/dataset/horarios-de-alta-velocidad-larga-distancia-y-media-distancia):
   - mid and long-distance train dataset (GTFS): routes, stops, stops times, trips, etc. for 2023.
 - Pre-computed from other sources (by authors):
   - rail emissions estimated using [EcoPassenger](http://ecopassenger.hafas.de).
-  - flight emissions per route estimated based on the model from Montlaur, A., Delgado, L., & Trapote-Barreira, C. (2021). [_Analytical Models for CO<sub>2</sub> Emissions and Travel Time for Short-to-Medium-Haul Flights Considering Available Seats_](https://doi.org/10.3390/su131810401). Sustainability 13.18 (2021) and from some specific flights using EUROCONTROL's [IMPACT](www.eurocontrol.int/platform/integrated-aircraft-noise-and-emissions-modelling-platform) model.
+  - flight emissions per route estimated based on the model from Montlaur, A., Delgado, L., & Trapote-Barreira, C. (2021). [_Analytical Models for CO<sub>2</sub> Emissions and Travel Time for Short-to-Medium-Haul Flights Considering Available Seats_](https://doi.org/10.3390/su131810401). Sustainability 13.18 (2021) and from some specific flights using EUROCONTROL's [IMPACT](https://www.eurocontrol.int/platform/integrated-aircraft-noise-and-emissions-modelling-platform) model.
 - Other (collected/computed by authors):
   - airport static information (coordinates).
   - manually modified airport codes with the list of airport codes swapped as erroneous departure or arrival sourced from OpenSky (flights_data4 table).
