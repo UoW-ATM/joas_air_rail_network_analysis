@@ -48,19 +48,19 @@ pip install -r requirements.txt
 ## 3. Data <a name="data"></a>
 
 ### i. Data availability <a name="data_availability"></a>
-All required data to reproduce the analysis of the article can be downloaded from Zenodo: https://zenodo.org/records/10038841
+All required data to reproduce the analysis of the article can be downloaded from Zenodo: [https://zenodo.org/records/10038840](https://zenodo.org/doi/10.5281/zenodo.10038840)
 
-All data sources used for this article are open source and available from (accessed 25/10/2023) [OpenSky](https://opensky-network.org/data/impala) and [Renfe](https://data.renfe.com/dataset/horarios-de-alta-velocidad-larga-distancia-y-media-distancia). 
+All data sources used for this article are open source and available from (accessed 25/10/2023) [OpenSky](https://opensky-network.org) and [Renfe](https://data.renfe.com/dataset/horarios-de-alta-velocidad-larga-distancia-y-media-distancia). 
 
 In addition, some data has been extracted from open available models and tools such as:
 - [EcoPassenger](http://ecopassenger.hafas.de) for rail emissions estimations.
-- Flight emissions estimated with models from Montlaur, A., Delgado, L., & Trapote-Barreira, C. (2021). [_Analytical Models for CO<sub>2</sub> Emissions and Travel Time for Short-to-Medium-Haul Flights Considering Available Seats_](https://doi.org/10.3390/su131810401). Sustainability 13.18 (2021) and from some specific flights using EUROCONTROL's [IMPACT](www.eurocontrol.int/platform/integrated-aircraft-noise-and-emissions-modelling-platform) model.
+- Flight emissions estimated with models from Montlaur, A., Delgado, L., & Trapote-Barreira, C. (2021). [_Analytical Models for CO<sub>2</sub> Emissions and Travel Time for Short-to-Medium-Haul Flights Considering Available Seats_](https://doi.org/10.3390/su131810401). Sustainability 13.18 (2021) and from some specific flights using EUROCONTROL's [IMPACT](https://www.eurocontrol.int/platform/integrated-aircraft-noise-and-emissions-modelling-platform) model.
 
 The authors have also compiled additional datasets, such as airport data (e.g. location), min and max number of seats per aircraft type, manual flight rotations fixes, etc. All these additional datasets are also available in the Zenodo record.
 
 ### ii. Brief data description <a name="data_brief_description"></a>
 Brief description of data input:
-- From [OpenSky](https://opensky-network.org/data/impala):
+- From [OpenSky](https://opensky-network.org):
   - flight information from OpenSky's flights_data4 table for the first week of May 2023.
   - aircraft database (registration, type, etc.) as a function of transponder's icao24 id.
 - From [Renfe](https://data.renfe.com/dataset/horarios-de-alta-velocidad-larga-distancia-y-media-distancia):
@@ -70,10 +70,10 @@ Brief description of data input:
   - flight emissions per route estimated based on the model from Montlaur, A., Delgado, L., & Trapote-Barreira, C. (2021). [_Analytical Models for CO<sub>2</sub> Emissions and Travel Time for Short-to-Medium-Haul Flights Considering Available Seats_](https://doi.org/10.3390/su131810401). Sustainability 13.18 (2021) and from some specific flights using EUROCONTROL's [IMPACT](https://www.eurocontrol.int/platform/integrated-aircraft-noise-and-emissions-modelling-platform) model.
 - Other (collected/computed by authors):
   - airport static information (coordinates).
-  - manually modified airport codes with the list of airport codes swapped as erroneous departure or arrival sourced from OpenSky (flights_data4 table).
+  - manually modified airport codes with the list of airport codes swapped as erroneous departure or arrival sourced from [OpenSky](https://opensky-network.org) (flights_data4 table).
   - aircraft rotations with further corrections and identification of the first and last airport visited daily. Compiled by own development and with additional data from [FlightRadar24](https://www.flightradar24.com/).
   - min and max number of seats for aircraft type from airlines' websites and other sources.
-  - aircraft type for some transponder's icao24 identifiers missing from OpenSky, compiled from [FlightRadar24](https://www.flightradar24.com/).
+  - aircraft type for some transponders' icao24 identifiers missing from OpenSky, compiled from [FlightRadar24](https://www.flightradar24.com/).
 
 ### iii. Data usage / input / output <a name="data_usage"></a>
 
@@ -95,7 +95,6 @@ Brief description of data input:
     - Computed results for multimodal analysis (ban analysis) will be stored in _multi_ sub-folder
     - All figures generated will be stored in _figs_ sub-folder
     - Logs are stored in _log_ sub-folder
-
 
 
 ## 4. Computation <a name="cmpt"></a>
