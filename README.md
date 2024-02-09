@@ -71,8 +71,9 @@ Brief description of data input:
 - Other (collected/computed by authors):
   - airport static information (coordinates).
   - manually modified airport codes: list of airport codes swapped as erroneous departure or arrival sourced from OpenSky.
-  - rotations with further corrections.
-  - min and max number seats for aircraft type.
+  - aircraft rotations with further corrections and idenfification of first and last airport visited each day. Source: own development supported with additional data from FlightRadar24.
+  - min and max number seats for aircraft type. Source: airline's webs and MIDT Data.
+  - aircraft type for some ICAO24 identificators that is missing in OpenSky is added. Source: FlightRadar24.
 
 ### iii. Data usage / input / output <a name="data_usage"></a>
 
