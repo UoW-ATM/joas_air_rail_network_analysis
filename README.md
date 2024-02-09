@@ -36,7 +36,7 @@ This article explores the potential impact of short-haul flight bans in Spain. W
 git clone https://github.com/UoW-ATM/joas_air_rail_network_analysis
 ```
 
-The code to compute the schedules, rail alternatives and impact of an aviation ban threshold in terms of flights being affected, rail usage, potential passenger itineraries, emissions estimations, etc. has been developed in Python (tested on Python 3.8). The analysis of fleet usage is performed in R. 
+The code to compute the schedules, rail alternatives and impact of an aviation ban threshold in terms of affected flights, rail usage, potential passenger itineraries, emissions estimations, etc., has been developed in Python (tested on Python 3.8). The analysis of fleet usage is performed in R. 
 
 For Python:
 - Install all required packages (code tested with Python 3.8):
@@ -62,29 +62,29 @@ The authors have also compiled additional datasets, such as airport data (e.g. l
 Brief description of data input:
 - From [OpenSky](https://opensky-network.org/data/impala):
   - flights_data4 --> contains the data from flights_data4 table from OpenSky for the first week of May 2023.
-  - aircraftDatabase.csv --> aircraft database (registration, type, etc.) as a function of transponder icao24 id.
+  - aircraftDatabase.csv --> aircraft database (registration, type, etc.) as a function of transponder's icao24 id.
 - From [Renfe](https://data.renfe.com/dataset/horarios-de-alta-velocidad-larga-distancia-y-media-distancia):
   - mid and long-distance train dataset (GTFS): routes, stops, stops times, trips, etc. for 2023.
 - Pre-computed from other sources (by authors):
-  - rail emissions: estimated using [EcoPassenger](http://ecopassenger.hafas.de).
-  - flight emissions per route: estimated based on model from Montlaur, A., Delgado, L., & Trapote-Barreira, C. (2021). [_Analytical Models for CO<sub>2</sub> Emissions and Travel Time for Short-to-Medium-Haul Flights Considering Available Seats_](https://doi.org/10.3390/su131810401). Sustainability 13.18 (2021) and from some specific flights using EUROCONTROL's [IMPACT](www.eurocontrol.int/platform/integrated-aircraft-noise-and-emissions-modelling-platform) model.
+  - rail emissions estimated using [EcoPassenger](http://ecopassenger.hafas.de).
+  - flight emissions per route estimated based on the model from Montlaur, A., Delgado, L., & Trapote-Barreira, C. (2021). [_Analytical Models for CO<sub>2</sub> Emissions and Travel Time for Short-to-Medium-Haul Flights Considering Available Seats_](https://doi.org/10.3390/su131810401). Sustainability 13.18 (2021) and from some specific flights using EUROCONTROL's [IMPACT](www.eurocontrol.int/platform/integrated-aircraft-noise-and-emissions-modelling-platform) model.
 - Other (collected/computed by authors):
   - airport static information (coordinates).
-  - manually modified airport codes: list of airport codes swapped as erroneous departure or arrival sourced from OpenSky.
-  - aircraft rotations with further corrections and idenfification of first and last airport visited each day. Source: own development supported with additional data from FlightRadar24.
-  - min and max number seats for aircraft type. Source: airline's webs and MIDT Data.
-  - aircraft type for some ICAO24 identificators that is missing in OpenSky is added. Source: FlightRadar24.
+  - manually modified airport codes with the list of airport codes swapped as erroneous departure or arrival sourced from OpenSky (flights_data4 table).
+  - aircraft rotations with further corrections and identification of the first and last airport visited daily. Compiled by own development and with additional data from [FlightRadar24](https://www.flightradar24.com/).
+  - min and max number of seats for aircraft type from airlines' websites and other sources.
+  - aircraft type for some transponder's icao24 identifiers missing from OpenSky, compiled from [FlightRadar24](https://www.flightradar24.com/).
 
 ### iii. Data usage / input / output <a name="data_usage"></a>
 
-- The scripts read the data from a folder called _data_ and produce output in a folder called _output_. By default, these folders are expected to be in the same folder as the scripts.
+- The scripts read the data from a folder called _data_ and produce output in a folder called _output_. These folders are expected to be in the same folder as the scripts by default.
 - Paths can be modified directly in the code.
 - The outcome of some scripts becomes part of the input to others, so the _downstream_ scripts will look for the data in the _output_ folder.
 
 
 - By default:
   - Input data stored in _data_ folder
-    - flights_data4 data stored in _flights_data4_ sub-folder following a datalake architecture (i.e., flights_data4/year=2023/month=05/)
+    - flights_data4 data stored in _flights_data4_ sub-folder following a data lake architecture (i.e., flights_data4/year=2023/month=05/)
     - renfe data stored in _renfe_ sub-folder
     - pre-computed data stored in _data_computed_ sub-folder
     - other datasets directly in _data_ folder
@@ -123,25 +123,25 @@ to analyse the system in different mobility performances and produce the require
 Results are mainly stored in the _output_ folder as figures (/output/figs/) with some analysis as csv files (/output/multi/).
 
 This code also produces (based on the previous computations) the following figures:
-- maps of flight and rail replacement as a function of the ban threshold (Figure 2 in article) (output in output/figs/img_map_replacement/), 
-- average number of routes per day per airline as a function of the ban threshold (Figure 3 in article), 
-- demand analysis at Madrid Barajas airport (LEMD) (Figure 7 in article),
-- daily average emissions shifted from air to rail as a function of the ban threshold (Figure 8 in article),
-- average number of possible itineraries within Peninsular Spain per trip type (flight, flight-flight, rail, rail-flight and flight-rail) as a function of the ban threshod (Figure 9 in article),
+- maps of flight and rail replacement as a function of the ban threshold (Figure 2 in the article) (output in output/figs/img_map_replacement/), 
+- average number of routes per day per airline as a function of the ban threshold (Figure 3 in the article), 
+- demand analysis at Madrid Barajas airport (LEMD) (Figure 7 in the article),
+- daily average emissions shifted from air to rail as a function of the ban threshold (Figure 8 in the article),
+- average number of possible itineraries within Peninsular Spain per trip type (flight, flight-flight, rail, rail-flight and flight-rail) as a function of the ban threshold (Figure 9 in the article),
 - mean time of possible itineraries within Peninsular Spain as a function of trip type (Figure 10 in the article)
 
 ### v. 5_fleet_analysis.Rmd <a name="cmpt_5"></a>
 R Notebook code to analyse the fleet usage with the short-haul ban consideration. 
 
 It generates the figures for:
-- the evolution of airline's utilisation factor as a function of ban threshold (Figure 4 in article),
-- the variation of ground time as a function of the ban threshold (Figure 5 in article),
-- the fleet size variation as a function of the ban threshold (Figure 6 in article)
+- the evolution of airline's utilisation factor as a function of ban threshold (Figure 4 in the article),
+- the variation of ground time as a function of the ban threshold (Figure 5 in the article),
+- the fleet size variation as a function of the ban threshold (Figure 6 in the article)
 
-In this case figures are not directly stored but displayed in notebook.
+In this case, figures are not directly stored but displayed in the notebook.
 
 ## 5. Authorship and License <a name="license"></a>
-Luis Delgado and Cesar Trapote-Barreira have written all the code. Data preparation, analysis and research were done in conjunction with Adeline Montlaur, Tatjana Bolić and Gérald Gurtner.
+Luis Delgado and Cesar Trapote-Barreira have written all the code. Data preparation, analysis and overall research were done with Adeline Montlaur, Tatjana Bolić and Gérald Gurtner.
 
 The code is released under the GPL v3 licence.
 
