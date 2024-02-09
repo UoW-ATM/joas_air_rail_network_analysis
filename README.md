@@ -26,7 +26,7 @@ Repository with code used to generate analysis and results of the article:
 Delgado, L., Trapote-Barreira, C., Montlaur, A., Bolić, T., & Gurtner, G. (2023). _Airlines’ network analysis on an air-rail multimodal system_. Journal of Open Aviation Science, 1(2). https://doi.org/10.59490/joas.2023.7223
 
 ### i. Abstract <a name="about_abstract"></a>
-This article explores the potential impact of short-haul flight bans in Spain. We build the rail and flight network for the Spanish peninsula, merging openly available ADS-B-based data, for the reconstruction of air schedules and aircraft rotations, and rail operator data, for the modelling of the rail network. We then simulate a ban that would remove flights having a suitable train replacement, i.e., representing a trip shorter than a threshold that we vary continuously up to 15-h. We study the impact in terms of 1) air route reduction, 2) aircraft utilisation and fleet downsizing for airlines, 3) airport infrastructure relief and rail network requirements, 4) CO2 emissions, and 5) possible itineraries and travel times for passengers. We find that a threshold of 3 hours (banning all flights with a direct rail alternative faster than three hours) presents some notable advantages in emissions while keeping the aircraft utilisation rate at an adequate level. Interestingly, the passengers would then experience an increase in their itinerary options, with only a moderate increase in their total travelling times.
+This article explores the potential impact of short-haul flight bans in Spain. We build the rail and flight network for the Spanish peninsula, merging openly available ADS-B-based data, for the reconstruction of air schedules and aircraft rotations, and rail operator data, for the modelling of the rail network. We then simulate a ban that would remove flights having a suitable train replacement, i.e., representing a trip shorter than a threshold that we vary continuously up to 15 hours. We study the impact in terms of 1) air route reduction, 2) aircraft utilisation and fleet downsizing for airlines, 3) airport infrastructure relief and rail network requirements, 4) CO2 emissions, and 5) possible itineraries and travel times for passengers. We find that a threshold of 3 hours (banning all flights with a direct rail alternative faster than three hours) presents some notable advantages in emissions while keeping the aircraft utilisation rate at an adequate level. Interestingly, the passengers would then experience an increase in their itinerary options, with only a moderate increase in their total travelling times.
 
 ## 2. Setup <a name="setup"></a>
 
@@ -56,7 +56,7 @@ In addition, some data has been extracted from open available models and tools s
 - [EcoPassenger](http://ecopassenger.hafas.de) for rail emissions estimations.
 - Flight emissions estimated with models from Montlaur, A., Delgado, L., & Trapote-Barreira, C. (2021). [_Analytical Models for CO<sub>2</sub> Emissions and Travel Time for Short-to-Medium-Haul Flights Considering Available Seats_](https://doi.org/10.3390/su131810401). Sustainability 13.18 (2021) and from some specific flights using EUROCONTROL's [IMPACT](www.eurocontrol.int/platform/integrated-aircraft-noise-and-emissions-modelling-platform) model.
 
-The authors have also compiled some additional datasets, such as airport data (e.g. location), min and max number of seats per aircraft type, some manual flight rotations fixes, etc. All these required datasets are also available in the Zenodo record.
+The authors have also compiled additional datasets, such as airport data (e.g. location), min and max number of seats per aircraft type, manual flight rotations fixes, etc. All these additional datasets are also available in the Zenodo record.
 
 ### ii. Brief data description <a name="data_brief_description"></a>
 Brief description of data input:
@@ -70,7 +70,7 @@ Brief description of data input:
   - flight emissions per route: estimated based on model from Montlaur, A., Delgado, L., & Trapote-Barreira, C. (2021). [_Analytical Models for CO<sub>2</sub> Emissions and Travel Time for Short-to-Medium-Haul Flights Considering Available Seats_](https://doi.org/10.3390/su131810401). Sustainability 13.18 (2021) and from some specific flights using EUROCONTROL's [IMPACT](www.eurocontrol.int/platform/integrated-aircraft-noise-and-emissions-modelling-platform) model.
 - Other (collected/computed by authors):
   - airport static information (coordinates).
-  - manually modified airport codes: list of airport codes swapped as erroneous departure or arrival.
+  - manually modified airport codes: list of airport codes swapped as erroneous departure or arrival sourced from OpenSky.
   - rotations with further corrections.
   - min and max number seats for aircraft type.
 
@@ -78,7 +78,7 @@ Brief description of data input:
 
 - The scripts read the data from a folder called _data_ and produce output in a folder called _output_. By default, these folders are expected to be in the same folder as the scripts.
 - Paths can be modified directly in the code.
-- The outcome of some scripts becomes part of the input of others, so the _downstream_ scripts will look for the data in the _output_ folder.
+- The outcome of some scripts becomes part of the input to others, so the _downstream_ scripts will look for the data in the _output_ folder.
 
 
 - By default:
@@ -121,7 +121,7 @@ This code uses the flight and rail used as a function of the threshold ban (and 
 to analyse the system in different mobility performances and produce the required plots (emissions, number of routes used, number of potential itineraries (flight, flight-flight, rail-flight, flight-rail and rail)).
 Results are mainly stored in the _output_ folder as figures (/output/figs/) with some analysis as csv files (/output/multi/).
 
-Among others, this code produces (based on the previous computations) the figures:
+This code also produces (based on the previous computations) the following figures:
 - maps of flight and rail replacement as a function of the ban threshold (Figure 2 in article) (output in output/figs/img_map_replacement/), 
 - average number of routes per day per airline as a function of the ban threshold (Figure 3 in article), 
 - demand analysis at Madrid Barajas airport (LEMD) (Figure 7 in article),
